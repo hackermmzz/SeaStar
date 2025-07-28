@@ -1,0 +1,35 @@
+# Unity 生成文件
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+
+# 隐藏的元文件
+.DS_Store
+*.swp
+*.swo
+
+# 二进制文件
+*.dll
+*.exe
+*.pdb
+*.mdb
+*.so
+*.dylib
+
+# Unity 包文件
+*.unitypackage
+
+# 其他
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj

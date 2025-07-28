@@ -1,0 +1,48 @@
+// PerlinNoise.compute
+#pragma kernel CSMain
+
+// Keijiro噪声库的核心函数
+#include "Assets/Resources/Shader/noiseShader/SimplexNoise2D.hlsl"
+
+// 参数
+int _ChunkSize;          // 网格尺寸 
+float _Frequency;       // 噪声频率
+float _HeightScale;     // 高度缩放
+float2 _Offset;         // 偏移量
+
+// 输出缓冲区
+RWStructuredBuffer<float> HeightBuffer;
+
+float Fract(float2 uv){
+    float ret=0.0;
+    float bl=1.0,div=1.0;
+    for(int i=0;i<8;++i){
+        //范围缩小至0---1
+        float noise=SimplexNoise(uv*bl)*0.5+0.5;
+        ret+=noise/div;
+        div*=2.0;
+        bl*=2.0;
+    }
+    return ret;
+}
+// 线程组配置
+[numthreads(16, 1, 16)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    uint idx=id.x*(_ChunkSize+1)+id.z;
+    //如果超出buf的大小，直接返回
+    if(id.x>_ChunkSize||id.z>_ChunkSize)return;
+    //计算当前的uv
+    float2 uv=float2(
+        float(id.x),
+        float(id.z)
+    );
+    //加上偏移
+    uv+=_Offset;
+    //应用缩放，使地形不会有太大变化
+    uv/=_Frequency;
+    // 生成分形噪声
+    float noise = Fract(uv);
+    // 映射到0-1范围并应用高度缩放
+    HeightBuffer[idx] = noise*_HeightScale;
+}

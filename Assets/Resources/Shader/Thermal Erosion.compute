@@ -1,0 +1,59 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+//
+float tanTheta;//阈值
+float factor0;//可转移比例
+float factor1;//实际转移比例
+int _ChunkSize;//
+//
+RWStructuredBuffer<float>height;
+RWStructuredBuffer<float>store;
+
+static const uint2 offset0[]={uint2(0,1),uint2(0,-1),uint2(1,0),uint2(-1,0)};
+static const uint2 offset1[]={uint2(1,1),uint2(1,-1),uint2(-1,1),uint2(-1,-1)};
+static const float sqrt2=1.41421356;
+
+float Canculate(float h0,float h1,float dis){
+    float dt=abs(h0-h1);
+    float tan_=dt/dis;
+    float ret=max(0.0,min(dt*factor0,dt-tanTheta*dis)*factor1);
+    float flag=1.0;
+    if(h0<h1)flag=-1.0;
+    return ret*flag;
+}
+
+float GetHeight(uint x,uint z){
+    return height[x*(_ChunkSize+1)+z];
+}
+
+void Store(uint x,uint z,float h){
+    store[x*(_ChunkSize+1)+z]=h;
+}
+
+[numthreads(16,1,16)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    //如果超出buf的大小，直接返回
+    if(id.x>_ChunkSize||id.z>_ChunkSize)return;
+    
+    //
+    float h=GetHeight(id.x,id.z);
+    float add=h;
+    for(int i=0;i<4;++i){
+        uint x=offset0[i].x+id.x,z=offset0[i].y+id.z;
+        if(x>=0&&x<=_ChunkSize&&z>=0&&z<=_ChunkSize){
+            float deltaH=Canculate(GetHeight(x,z),h,1.0);
+            add+=deltaH;
+        }
+    }
+    for(int i=0;i<4;++i){
+        uint x=offset1[i].x+id.x,z=offset1[i].y+id.z;
+        if(x>=0&&x<=_ChunkSize&&z>=0&&z<=_ChunkSize){
+            float deltaH=Canculate(GetHeight(x,z),h,sqrt2);
+            add+=deltaH;
+        }
+    }
+    Store(id.x,id.z,add);
+}
+
